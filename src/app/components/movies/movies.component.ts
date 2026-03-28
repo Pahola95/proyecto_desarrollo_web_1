@@ -144,8 +144,9 @@ export class MoviesComponent implements OnInit, OnDestroy {
         this.closeRatingModal();
         alert('¡Película calificada exitosamente!');
       },
-      error: (error) => {
+      error: () => {
         this.ratingLoading = false;
+        this.ratingError = 'No se pudo enviar la calificación. Intenta de nuevo.';
       },
     });
   }

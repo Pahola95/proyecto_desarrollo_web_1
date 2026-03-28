@@ -33,7 +33,7 @@
             <p class="rating-carousel">⭐ {{ movie.vote_average }}/10</p>
             <button 
               class="rate-btn-carousel"
-              (click)="openRatingModal(movie.id, movie.title, movie.overview)"
+              (click)="$event.stopPropagation(); openRatingModal(movie.id, movie.title || movie.name, movie.overview)"
             >
               Calificar
             </button>
