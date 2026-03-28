@@ -1,0 +1,30 @@
+<div class="favorites-container">
+  <h1 class="favorites-title">Mis Favoritos</h1>
+
+  <div *ngIf="(favService.favorites$ | async)?.length === 0" class="empty-state">
+    <p>No tienes favoritos aún. Agrega películas o series desde el catálogo.</p>
+    <a routerLink="/movies" class="browse-btn">Explorar Películas</a>
+  </div>
+
+  <div class="favorites-grid" *ngIf="(favService.favorites$ | async) as favorites">
+    <div *ngFor="let item of favorites" class="fav-card">
+      <a [routerLink]="['/' + item.mediaType, item.id]" class="fav-link">
+        <img
+          *ngIf="item.posterPath"
+          [src]="'https://image.tmdb.org/t/p/w300' + item.posterPath"
+          [alt]="item.title"
+          class="fav-poster"
+        />
+        <div *ngIf="!item.posterPath" class="fav-no-poster">🎬</div>
+      </a>
+      <div class="fav-info">
+        <a [routerLink]="['/' + item.mediaType, item.id]" class="fav-title-link">
+          <h3 class="fav-title">{{ item.title }}</h3>
+        </a>
+        <span class="fav-type">{{ item.mediaType === 'tv' ? 'Serie' : 'Película' }}</span>
+        <span class="fav-rating">⭐ {{ item.voteAverage?.toFixed(1) }}/10</span>
+      </div>
+      <button class="remove-btn" (click)="remove(item)" title="Quitar de favoritos">✕</button>
+    </div>
+  </div>
+</div>

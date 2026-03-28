@@ -1,0 +1,94 @@
+<div class="detail-container" *ngIf="!loading && movie">
+  <!-- Backdrop -->
+  <div
+    *ngIf="movie.backdrop_path"
+    class="backdrop"
+    [style.backgroundImage]="'url(https://image.tmdb.org/t/p/w1280' + movie.backdrop_path + ')'"
+  ></div>
+
+  <div class="detail-content">
+    <button class="back-btn" (click)="goBack()">← Volver</button>
+
+    <!-- Header: poster + info -->
+    <div class="header-section">
+      <img
+        *ngIf="movie.poster_path"
+        [src]="'https://image.tmdb.org/t/p/w500' + movie.poster_path"
+        [alt]="movie.title || movie.name"
+        class="poster"
+      />
+      <div class="info">
+        <h1 class="title">{{ movie.title || movie.name }}</h1>
+        <button class="fav-toggle-btn" [class.is-fav]="isFavorite" (click)="toggleFavorite()">
+          {{ isFavorite ? '❤️ En Favoritos' : '🤍 Agregar a Favoritos' }}
+        </button>
+        <p class="meta">
+          {{ (movie.release_date || movie.first_air_date) | date:'yyyy' }}
+          <ng-container *ngIf="movie.runtime"> &middot; {{ movie.runtime }} min</ng-container>
+          <ng-container *ngIf="movie.number_of_seasons"> &middot; {{ movie.number_of_seasons }} temporadas</ng-container>
+          &middot; ⭐ {{ movie.vote_average?.toFixed(1) }}/10
+        </p>
+        <p class="genres">
+          <span *ngFor="let g of movie.genres" class="genre-tag">{{ g.name }}</span>
+        </p>
+        <p class="overview">{{ movie.overview }}</p>
+      </div>
+    </div>
+
+    <!-- Trailer -->
+    <section *ngIf="trailerUrl" class="section">
+      <h2 class="section-title">Trailer</h2>
+      <div class="trailer-wrapper">
+        <iframe
+          [src]="trailerUrl"
+          frameborder="0"
+          allowfullscreen
+          title="Trailer"
+          class="trailer-iframe"
+        ></iframe>
+      </div>
+    </section>
+
+    <!-- Cast -->
+    <section *ngIf="cast.length > 0" class="section">
+      <h2 class="section-title">Actores</h2>
+      <div class="cast-grid">
+        <div *ngFor="let actor of cast" class="cast-card">
+          <img
+            *ngIf="actor.profile_path"
+            [src]="'https://image.tmdb.org/t/p/w185' + actor.profile_path"
+            [alt]="actor.name"
+            class="cast-img"
+          />
+          <div *ngIf="!actor.profile_path" class="cast-no-img">🎭</div>
+          <p class="cast-name">{{ actor.name }}</p>
+          <p class="cast-character">{{ actor.character }}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Similar -->
+    <section *ngIf="similarMovies.length > 0" class="section">
+      <h2 class="section-title">{{ mediaType === 'tv' ? 'Series Similares' : 'Películas Similares' }}</h2>
+      <div class="similar-grid">
+        <a
+          *ngFor="let m of similarMovies"
+          [routerLink]="['/' + mediaType, m.id]"
+          class="similar-card"
+        >
+          <img
+            *ngIf="m.poster_path"
+            [src]="'https://image.tmdb.org/t/p/w300' + m.poster_path"
+            [alt]="m.title || m.name"
+            class="similar-img"
+          />
+          <p class="similar-title">{{ m.title || m.name }}</p>
+        </a>
+      </div>
+    </section>
+
+    <a routerLink="/movies" class="back-link">← Volver a Películas</a>
+  </div>
+</div>
+
+<div *ngIf="loading" class="loading-screen">Cargando detalles...</div>

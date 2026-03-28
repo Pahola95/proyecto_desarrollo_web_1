@@ -1,0 +1,20 @@
+<div class="profile-page" *ngIf="auth.user$ | async as user">
+  <div class="profile-header">
+    <div class="profile-card">
+      <div class="avatar-section">
+        <img
+          [src]="user.picture"
+          [alt]="'Avatar de ' + user.name"
+          class="avatar"
+        />
+      </div>
+      <h1 class="profile-name">{{ user.name }}</h1>
+      <p class="profile-email">{{ user.email }}</p>
+      <button class="back-btn" routerLink="/movies" type="button">
+        Volver a Películas
+      </button>
+    </div>
+  </div>
+
+  <app-favorites></app-favorites>
+</div>

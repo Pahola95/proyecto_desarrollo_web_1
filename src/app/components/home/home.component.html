@@ -1,0 +1,42 @@
+<div class="home-container">
+  <div class="welcome-section">
+    <h1 class="welcome-title">Bienvenido a MovieApp</h1>
+    <p class="welcome-description">
+      Descubre y califica tus películas favoritas con nuestra aplicación.
+    </p>
+
+    <!-- Usuario NO autenticado -->
+    <div class="auth-section" *ngIf="!(auth.isAuthenticated$ | async)">
+      <button class="login-btn" (click)="login()" type="button">
+        Iniciar Sesión
+      </button>
+      <p class="auth-info">
+        Necesitas iniciar sesión para acceder al catálogo de películas.
+      </p>
+    </div>
+
+    <!-- Usuario autenticado -->
+    <div class="authenticated-section" *ngIf="auth.isAuthenticated$ | async">
+      <div class="user-info">
+        <h3>
+          ¡Hola,
+          {{ (auth.user$ | async)?.name || (auth.user$ | async)?.email }}!
+        </h3>
+        <p>Ya puedes explorar y calificar películas.</p>
+      </div>
+
+      <!-- Botón general -->
+      <button class="movies-btn" routerLink="/movies" type="button">
+        Ver Películas
+      </button>
+
+      <!-- 🔐 SOLO ADMIN -->
+      <div *ngIf="isAdmin$ | async" class="admin-section">
+        <h4>Panel de administrador</h4>
+        <button class="admin-btn" routerLink="/admin" type="button">
+          Ir a Administración
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

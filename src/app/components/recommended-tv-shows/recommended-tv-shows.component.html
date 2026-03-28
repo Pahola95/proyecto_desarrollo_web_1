@@ -1,0 +1,66 @@
+<div class="trending-container">
+  <h1 class="trending-title">TV Shows Recomendados</h1>
+
+  <div *ngIf="loading" class="loading-message">Cargando shows de TV...</div>
+  <div *ngIf="error" class="error-message">{{ error }}</div>
+
+  <div *ngIf="!loading && !error && movies.length > 0" class="carousel-section">
+    <button class="carousel-btn prev-btn" (click)="previous()" [disabled]="carouselIndex === 0">
+      &#10094; Anterior
+    </button>
+
+    <div class="carousel-track">
+      <div *ngFor="let movie of currentMovies" class="movie-card-carousel" [routerLink]="['/tv', movie.id]" style="cursor:pointer;">
+        <img
+          [src]="'https://image.tmdb.org/t/p/w500' + movie.poster_path"
+          [alt]="movie.title || movie.name"
+          class="movie-poster"
+        />
+        <div class="movie-overlay">
+          <button class="rate-btn" (click)="$event.stopPropagation(); openRatingModal(movie)">⭐ Calificar</button>
+          <button class="fav-btn-overlay" (click)="$event.stopPropagation(); toggleFav(movie)">
+            {{ isFav(movie) ? '❤️' : '🤍' }}
+          </button>
+        </div>
+        <div class="movie-info">
+          <h3 class="movie-title">{{ movie.title || movie.name }}</h3>
+          <p class="movie-rating">⭐ {{ movie.vote_average?.toFixed(1) ?? 'N/A' }}/10</p>
+        </div>
+      </div>
+    </div>
+
+    <button class="carousel-btn next-btn" (click)="next()" [disabled]="carouselIndex + itemsPerPage >= movies.length">
+      Siguiente &#10095;
+    </button>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div *ngIf="!loading && !error && movies.length > 0" class="pagination-controls">
+    <button class="page-btn" (click)="previousPage()" [disabled]="currentApiPage === 1">
+      Página Anterior
+    </button>
+    <span class="page-info">Página {{ currentApiPage }}</span>
+    <button class="page-btn" (click)="nextPage()">
+      Página Siguiente
+    </button>
+  </div>
+
+  <!-- Rating Modal -->
+  <div *ngIf="ratingMovie" class="modal-overlay" (click)="closeRatingModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2>Calificar: {{ ratingMovie.title }}</h2>
+      <p class="movie-description" *ngIf="ratingMovie.overview">{{ ratingMovie.overview }}</p>
+      <div class="star-rating">
+        <button *ngFor="let i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]" (click)="setRating(i)" [class.active]="userRating >= i">
+          ⭐
+        </button>
+      </div>
+      <div class="modal-buttons">
+        <button class="modal-btn cancel" (click)="closeRatingModal()">Cancelar</button>
+        <button class="modal-btn submit" (click)="submitRating()" [disabled]="userRating === 0">
+          Enviar Calificación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

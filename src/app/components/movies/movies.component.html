@@ -1,0 +1,115 @@
+<div class="carousel-container">
+  <h1 class="title">Películas Trending</h1>
+  <div *ngIf="loading" class="loading">
+    Cargando películas...
+  </div>
+
+  <div *ngIf="error" class="error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="!loading && !error && movies.length > 0" class="carousel-wrapper">
+    <!-- Previous Button -->
+    <button class="carousel-btn prev" (click)="previousSlide()" [disabled]="currentPage === 0">
+      ❮
+    </button>
+
+    <!-- Carousel Content -->
+    <div class="carousel-content">
+      <div class="carousel-track" [style.transform]="'translateX(-' + (currentPage * 100) + '%)'">
+        <div *ngFor="let movie of movies" class="movie-card-carousel" [routerLink]="['/' + (movie.media_type || 'movie'), movie.id]" style="cursor:pointer;">
+          <div class="movie-poster-carousel">
+            <img 
+              *ngIf="movie.poster_path" 
+              [src]="'https://image.tmdb.org/t/p/w500' + movie.poster_path" 
+              [alt]="movie.title || movie.name"
+              class="poster-img-carousel"
+            />
+            <div *ngIf="!movie.poster_path" class="no-poster-carousel">No Image</div>
+          </div>
+          <div class="movie-info-carousel">
+            <h3>{{ movie.title || movie.name }}</h3>
+            <p class="overview-carousel">{{ movie.overview }}</p>
+            <p class="rating-carousel">⭐ {{ movie.vote_average }}/10</p>
+            <button 
+              class="rate-btn-carousel"
+              (click)="openRatingModal(movie.id, movie.title, movie.overview)"
+            >
+              Calificar
+            </button>
+            <button
+              class="fav-btn-carousel"
+              (click)="$event.stopPropagation(); toggleFav(movie)"
+            >
+              {{ isFav(movie) ? '❤️' : '🤍' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Next Button -->
+    <button class="carousel-btn next" (click)="nextSlide()" [disabled]="currentPage === getMaxPages() - 1">
+      ❯
+    </button>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div *ngIf="!loading && !error && movies.length > 0" class="pagination-controls">
+    <button class="pagination-btn" (click)="previousPage()" [disabled]="carouselPage === 1">
+      ← Página Anterior
+    </button>
+    <span class="page-info">Página {{ carouselPage }} | {{ currentPage + 1 }}/{{ getMaxPages() }}</span>
+    <button class="pagination-btn" (click)="nextPage()">
+      Página Siguiente →
+    </button>
+  </div>
+
+  <div *ngIf="!loading && !error && movies.length === 0" class="no-movies">
+    No hay películas disponibles.
+  </div>
+</div>
+
+<!-- Rating Modal -->
+<div *ngIf="showRatingModal" class="modal-overlay" (click)="closeRatingModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Calificar: {{ selectedMovieTitle }}</h2>
+      <button class="close-btn" (click)="closeRatingModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="overview-carousel-modal">{{ selectedMovieOverView }}</p>
+      <div class="rating-stars">
+        <button 
+          *ngFor="let star of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+          class="star-btn"
+          [class.active]="star <= userRating"
+          (click)="setRating(star)"
+        >
+          ⭐
+        </button>
+      </div>
+      <p class="rating-value" *ngIf="userRating > 0">
+        Tu calificación: {{ userRating }}/10
+      </p>
+
+      <div *ngIf="ratingError" class="rating-error">
+        {{ ratingError }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeRatingModal()">Cancelar</button>
+      <button 
+        class="btn-submit"
+        (click)="submitRating()"
+        [disabled]="userRating === 0 || ratingLoading"
+      >
+        {{ ratingLoading ? 'Enviando...' : 'Enviar Calificación' }}
+      </button>
+    </div>
+  </div>
+</div>
+<app-popular-movies></app-popular-movies>
+<app-recommended-tv-shows></app-recommended-tv-shows>

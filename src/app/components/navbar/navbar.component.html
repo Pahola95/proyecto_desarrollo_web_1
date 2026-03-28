@@ -1,0 +1,18 @@
+<nav class="top-nav">
+  <div class="nav-links">
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-link">Inicio</a>
+    <a routerLink="/movies" routerLinkActive="active" class="nav-link">Películas</a>
+    <a routerLink="/search" routerLinkActive="active" class="nav-link">Buscar</a>
+    <a routerLink="/favorites" routerLinkActive="active" class="nav-link">Favoritos</a>
+  </div>
+  <div class="nav-actions">
+    <button *ngIf="!(auth.isAuthenticated$ | async)" class="nav-login-btn" (click)="login()">Login</button>
+    <ng-container *ngIf="auth.isAuthenticated$ | async">
+      <a routerLink="/profile" class="profile-pill" *ngIf="auth.user$ | async as user">
+        <img [src]="user.picture" [alt]="user.name" class="profile-pill-avatar" />
+        <span class="profile-pill-name">{{ user.name || user.email }}</span>
+      </a>
+      <button class="nav-logout-btn" (click)="logout()">Logout</button>
+    </ng-container>
+  </div>
+</nav>

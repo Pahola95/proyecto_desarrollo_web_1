@@ -1,0 +1,20 @@
+/* You can add global styles to this file, and also import other style files */
+
+/* Favorite button on cards */
+.fav-btn-carousel,
+.fav-btn-overlay {
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.fav-btn-carousel:hover,
+.fav-btn-overlay:hover {
+  background: rgba(0, 0, 0, 0.7);
+  transform: scale(1.15);
+}

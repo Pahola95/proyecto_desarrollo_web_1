@@ -1,0 +1,141 @@
+<div class="search-container">
+  <h1 class="search-title">Buscar {{ getItemTitle() }}</h1>
+
+  <!-- Search Box -->
+  <div class="search-box">
+    <select [(ngModel)]="searchType" class="search-type-select">
+      <option value="movie">Películas</option>
+      <option value="person">Actores</option>
+      <option value="tv">Series de TV</option>
+    </select>
+    <input
+      type="text"
+      [(ngModel)]="searchQuery"
+      (keypress)="onKeyPress($event)"
+      placeholder="Ingresa el nombre..."
+      class="search-input"
+      aria-label="Buscar"
+    />
+    <button class="search-btn" (click)="search()" [disabled]="loading">
+      {{ loading ? 'Buscando...' : 'Buscar' }}
+    </button>
+  </div>
+
+  <!-- Error Messages -->
+  <div *ngIf="error && !loading" class="error-message">
+    {{ error }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-message">
+    Buscando {{ getItemTitle() | lowercase }}...
+  </div>
+
+  <!-- Results -->
+  <div *ngIf="!loading && hasSearched && movies.length > 0" class="carousel-section">
+    <button
+      class="carousel-btn prev-btn"
+      (click)="previous()"
+      [disabled]="carouselIndex === 0"
+      aria-label="Anterior"
+    >
+      ‹ Anterior
+    </button>
+
+    <div class="carousel-track">
+      <div
+        *ngFor="let item of currentMovies"
+        class="movie-card-carousel"
+        [routerLink]="searchType === 'tv' ? ['/tv', item.id] : searchType === 'movie' ? ['/movie', item.id] : null"
+        [style.cursor]="searchType !== 'person' ? 'pointer' : 'default'"
+        [style.animation]="'fadeInScale 0.5s ease-in-out'"
+      >
+        <div class="movie-poster-wrap">
+          <img
+            *ngIf="getItemImage(item)"
+            [src]="'https://image.tmdb.org/t/p/w300' + getItemImage(item)"
+            [alt]="getItemName(item)"
+            class="movie-poster"
+          />
+          <div *ngIf="!getItemImage(item)" class="no-poster">No hay imagen</div>
+          <div class="movie-overlay" *ngIf="canRate()">
+            <button class="rate-btn" (click)="$event.stopPropagation(); openRatingModal(item)">
+              ⭐ Calificar
+            </button>
+          </div>
+          <button
+            *ngIf="searchType !== 'person'"
+            class="fav-btn-overlay"
+            (click)="$event.stopPropagation(); toggleFav(item)"
+          >
+            {{ isFav(item) ? '❤️' : '🤍' }}
+          </button>
+        </div>
+        <div class="movie-info">
+          <h3 class="movie-title">{{ getItemName(item) }}</h3>
+          <p class="movie-date">{{ getItemReleaseDate(item) }}</p>
+          <p class="movie-rating">⭐ {{ getItemRating(item) }}/10</p>
+        </div>
+      </div>
+    </div>
+
+    <button
+      class="carousel-btn next-btn"
+      (click)="next()"
+      [disabled]="carouselIndex + itemsPerPage >= movies.length"
+      aria-label="Siguiente"
+    >
+      Siguiente ›
+    </button>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div *ngIf="!loading && hasSearched && movies.length > 0" class="pagination-controls">
+    <button
+      class="page-btn"
+      (click)="previousPage()"
+      [disabled]="currentApiPage === 1"
+    >
+      ← Página Anterior
+    </button>
+    <span class="page-info">Página {{ currentApiPage }}</span>
+    <button class="page-btn" (click)="nextPage()">
+      Página Siguiente →
+    </button>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && hasSearched && movies.length === 0 && !error" class="empty-state">
+    <p>No se encontraron resultados.</p>
+  </div>
+
+  <!-- Rating Modal -->
+  <div *ngIf="ratingMovie" class="modal-overlay" (click)="closeRatingModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h2>Calificar: {{ ratingMovie.title }}</h2>
+      <p class="movie-description" *ngIf="ratingMovie.overview">{{ ratingMovie.overview }}</p>
+      <div class="star-rating">
+        <button
+          *ngFor="let i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+          (click)="setRating(i)"
+          [class.active]="userRating >= i"
+          class="star-btn"
+        >
+          ⭐
+        </button>
+      </div>
+      <div class="modal-buttons">
+        <button class="modal-btn cancel" (click)="closeRatingModal()">
+          Cancelar
+        </button>
+        <button
+          class="modal-btn submit"
+          (click)="submitRating()"
+          [disabled]="userRating === 0 || ratingLoading"
+        >
+          {{ ratingLoading ? 'Calificando...' : 'Enviar Calificación' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

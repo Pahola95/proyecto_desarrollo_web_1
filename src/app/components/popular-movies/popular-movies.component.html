@@ -1,0 +1,130 @@
+<div class="carousel-container">
+  <h1 class="title">Películas Populares</h1>
+
+  <div *ngIf="loading" class="loading">
+    Cargando películas populares...
+  </div>
+
+  <div *ngIf="error" class="error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="!loading && !error && movies.length > 0" class="carousel-wrapper">
+    <!-- Previous Button -->
+    <button 
+      class="carousel-btn prev" 
+      (click)="previous()" 
+      [disabled]="carouselIndex === 0"
+      aria-label="Película anterior">
+      ‹
+    </button>
+
+    <!-- Carousel Track -->
+    <div class="carousel-track">
+      <div class="movie-carousel-container">
+        <div 
+          *ngFor="let movie of currentMovies" 
+          class="movie-card-carousel"
+          [routerLink]="['/movie', movie.id]"
+          style="cursor:pointer;"
+          [style.animation]="'fadeInScale 0.5s ease-in-out'"
+        >
+          <div class="movie-poster-carousel">
+            <img 
+              *ngIf="movie.poster_path" 
+              [src]="'https://image.tmdb.org/t/p/w300' + movie.poster_path" 
+              [alt]="movie.title || movie.name"
+              class="poster-img-carousel"
+            />
+            <div *ngIf="!movie.poster_path" class="no-poster-carousel">No Image</div>
+            <div class="movie-overlay">
+              <button 
+                class="rate-btn-overlay"
+                (click)="$event.stopPropagation(); openRatingModal(movie.id, movie.title, movie.overview)"
+              >
+                ⭐ Calificar
+              </button>
+              <button
+                class="fav-btn-overlay"
+                (click)="$event.stopPropagation(); toggleFav(movie)"
+              >
+                {{ isFav(movie) ? '❤️' : '🤍' }}
+              </button>
+            </div>
+          </div>
+          <div class="movie-info-carousel">
+            <h3>{{ movie.title || movie.name }}</h3>
+            <p class="rating-carousel">⭐ {{ movie.vote_average }}/10</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Next Button -->
+    <button 
+      class="carousel-btn next" 
+      (click)="next()" 
+      [disabled]="carouselIndex + itemsPerPage >= movies.length"
+      aria-label="Siguiente película">
+      ›
+    </button>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div *ngIf="!loading && !error && movies.length > 0" class="pagination-controls">
+    <button class="pagination-btn" (click)="previousPage()" [disabled]="currentApiPage === 1">
+      ← Página Anterior
+    </button>
+    <span class="page-info">Página {{ currentApiPage }}</span>
+    <button class="pagination-btn" (click)="nextPage()">
+      Página Siguiente →
+    </button>
+  </div>
+
+  <div *ngIf="!loading && !error && movies.length === 0" class="no-movies">
+    No hay películas populares disponibles.
+  </div>
+</div>
+
+<!-- Rating Modal -->
+<div *ngIf="showRatingModal" class="modal-overlay" (click)="closeRatingModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h2>Calificar: {{ selectedMovieTitle }}</h2>
+      <button class="close-btn" (click)="closeRatingModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="overview-carousel-modal">{{ selectedMovieOverView }}</p>
+      <div class="rating-stars">
+        <button 
+          *ngFor="let star of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+          class="star-btn"
+          [class.active]="star <= userRating"
+          (click)="setRating(star)"
+        >
+          ⭐
+        </button>
+      </div>
+      <p class="rating-value" *ngIf="userRating > 0">
+        Tu calificación: {{ userRating }}/10
+      </p>
+
+      <div *ngIf="ratingError" class="rating-error">
+        {{ ratingError }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeRatingModal()">Cancelar</button>
+      <button 
+        class="btn-submit"
+        (click)="submitRating()"
+        [disabled]="userRating === 0 || ratingLoading"
+      >
+        {{ ratingLoading ? 'Enviando...' : 'Enviar Calificación' }}
+      </button>
+    </div>
+  </div>
+</div>
