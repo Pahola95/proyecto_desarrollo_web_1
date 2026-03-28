@@ -2,8 +2,10 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Subject, combineLatest, debounceTime, distinctUntilChanged, switchMap, takeUntil, of } from 'rxjs';
 import { MoviesService } from '../../services/movies.service';
 import { FavoritesService } from '../../services/favorites.service';
+import { GenreService, Genre } from '../../services/genre.service';
 
 @Component({
   selector: 'app-search-movies',
@@ -14,11 +16,14 @@ import { FavoritesService } from '../../services/favorites.service';
 })
 export class SearchMoviesComponent implements OnInit, OnDestroy {
   private moviesService = inject(MoviesService);
+  private genreService = inject(GenreService);
   favService = inject(FavoritesService);
 
   movies: any[] = [];
   searchQuery: string = '';
   searchType: 'movie' | 'person' | 'tv' = 'movie';
+  selectedGenreId: number | null = null;
+  genres: Genre[] = [];
   currentApiPage: number = 1;
   carouselIndex: number = 0;
   itemsPerPage: number = 5;
@@ -28,8 +33,11 @@ export class SearchMoviesComponent implements OnInit, OnDestroy {
   ratingMovie: any = null;
   userRating: number = 0;
   ratingLoading: boolean = false;
+
   private resizeListener: (() => void) | null = null;
   private previousSearchType: 'movie' | 'person' | 'tv' = 'movie';
+  private destroy$ = new Subject<void>();
+  private movieFilter$ = new Subject<{ query: string; genreId: number | null; page: number }>();
 
   ngOnInit(): void {
     this.calculateItemsPerPage();
@@ -38,12 +46,54 @@ export class SearchMoviesComponent implements OnInit, OnDestroy {
       this.carouselIndex = 0;
     };
     window.addEventListener('resize', this.resizeListener);
+
+    // Load genres for the filter
+    this.genreService.getMovieGenres().subscribe({
+      next: (res) => (this.genres = res.genres),
+    });
+
+    // Reactive pipeline with debounce for movie searches
+    this.movieFilter$
+      .pipe(
+        debounceTime(400),
+        distinctUntilChanged((a, b) =>
+          a.query === b.query && a.genreId === b.genreId && a.page === b.page
+        ),
+        switchMap((params) => {
+          // Only trigger if there's a query OR a genre selected
+          if (!params.query.trim() && !params.genreId) return of(null);
+          this.loading = true;
+          this.error = '';
+          this.hasSearched = true;
+          return this.genreService.discoverMovies({
+            query: params.query,
+            genreId: params.genreId,
+            page: params.page,
+          });
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (res) => {
+          if (res === null) return;
+          this.movies = res?.results ?? [];
+          this.loading = false;
+          this.carouselIndex = 0;
+          if (this.movies.length === 0) {
+            this.error = 'No se encontraron resultados.';
+          }
+        },
+        error: () => {
+          this.error = 'Error al buscar. Intenta de nuevo.';
+          this.loading = false;
+        },
+      });
   }
 
   ngOnDestroy(): void {
-    if (this.resizeListener) {
-      window.removeEventListener('resize', this.resizeListener);
-    }
+    if (this.resizeListener) window.removeEventListener('resize', this.resizeListener);
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   calculateItemsPerPage(): number {
@@ -54,45 +104,71 @@ export class SearchMoviesComponent implements OnInit, OnDestroy {
     return 10;
   }
 
+  private emitFilter(): void {
+    this.movieFilter$.next({
+      query: this.searchQuery,
+      genreId: this.selectedGenreId,
+      page: this.currentApiPage,
+    });
+  }
+
+  // Called when user types in the search input
+  onQueryChange(): void {
+    if (this.searchType !== 'movie') return;
+    this.currentApiPage = 1;
+    this.emitFilter();
+  }
+
+  // Called when genre select changes
+  onGenreChange(): void {
+    this.currentApiPage = 1;
+    this.carouselIndex = 0;
+    this.emitFilter();
+  }
+
   search(): void {
+    if (this.searchType !== 'movie') {
+      this.runLegacySearch();
+      return;
+    }
+    if (!this.searchQuery.trim() && !this.selectedGenreId) {
+      this.error = 'Ingresa un término o selecciona un género.';
+      return;
+    }
+    this.currentApiPage = 1;
+    this.emitFilter();
+  }
+
+  // Legacy search for person / tv (unchanged behavior)
+  private runLegacySearch(): void {
     if (!this.searchQuery.trim()) {
       this.error = 'Por favor ingresa un término de búsqueda.';
       return;
     }
-    
-    // Si cambió el tipo de búsqueda, limpiar resultados previos
     if (this.searchType !== this.previousSearchType) {
       this.movies = [];
       this.previousSearchType = this.searchType;
     }
-    
     this.currentApiPage = 1;
     this.carouselIndex = 0;
-    this.fetchSearchResults(this.searchQuery, this.currentApiPage);
+    this.fetchLegacyResults(this.searchQuery, this.currentApiPage);
   }
 
-  fetchSearchResults(query: string, page: number): void {
+  fetchLegacyResults(query: string, page: number): void {
     this.loading = true;
     this.error = '';
     this.hasSearched = true;
 
-    let searchObservable;
-    if (this.searchType === 'movie') {
-      searchObservable = this.moviesService.searchMovies(query, page);
-    } else if (this.searchType === 'person') {
-      searchObservable = this.moviesService.searchPerson(query, page);
-    } else {
-      searchObservable = this.moviesService.searchTV(query, page);
-    }
+    const obs = this.searchType === 'person'
+      ? this.moviesService.searchPerson(query, page)
+      : this.moviesService.searchTV(query, page);
 
-    searchObservable.subscribe({
+    obs.subscribe({
       next: (res) => {
         this.movies = res?.results ?? [];
         this.loading = false;
         this.carouselIndex = 0;
-        if (this.movies.length === 0) {
-          this.error = 'No se encontraron resultados con ese término.';
-        }
+        if (this.movies.length === 0) this.error = 'No se encontraron resultados.';
       },
       error: () => {
         this.error = 'Error al buscar. Intenta de nuevo.';
@@ -102,74 +178,59 @@ export class SearchMoviesComponent implements OnInit, OnDestroy {
   }
 
   next(): void {
-    if (this.carouselIndex + this.itemsPerPage < this.movies.length) {
-      this.carouselIndex++;
-    }
+    if (this.carouselIndex + this.itemsPerPage < this.movies.length) this.carouselIndex++;
   }
 
   previous(): void {
-    if (this.carouselIndex > 0) {
-      this.carouselIndex--;
-    }
+    if (this.carouselIndex > 0) this.carouselIndex--;
   }
 
   nextPage(): void {
     this.currentApiPage++;
-    this.fetchSearchResults(this.searchQuery, this.currentApiPage);
+    if (this.searchType === 'movie') {
+      this.emitFilter();
+    } else {
+      this.fetchLegacyResults(this.searchQuery, this.currentApiPage);
+    }
   }
 
   previousPage(): void {
     if (this.currentApiPage > 1) {
       this.currentApiPage--;
-      this.fetchSearchResults(this.searchQuery, this.currentApiPage);
+      if (this.searchType === 'movie') {
+        this.emitFilter();
+      } else {
+        this.fetchLegacyResults(this.searchQuery, this.currentApiPage);
+      }
     }
   }
 
   get currentMovies(): any[] {
-    const start = this.carouselIndex;
-    const end = start + this.itemsPerPage;
-    return this.movies.slice(start, end);
+    return this.movies.slice(this.carouselIndex, this.carouselIndex + this.itemsPerPage);
   }
 
   openRatingModal(item: any): void {
-    if (this.searchType !== 'movie') {
-      this.error = 'Solo puedes calificar películas.';
-      return;
-    }
+    if (this.searchType !== 'movie') { this.error = 'Solo puedes calificar películas.'; return; }
     this.ratingMovie = item;
     this.userRating = 0;
   }
 
-  closeRatingModal(): void {
-    this.ratingMovie = null;
-    this.userRating = 0;
-  }
+  closeRatingModal(): void { this.ratingMovie = null; this.userRating = 0; }
 
   submitRating(): void {
     if (this.ratingMovie && this.userRating > 0) {
       this.ratingLoading = true;
       this.moviesService.rateMovie(this.ratingMovie.id, this.userRating).subscribe({
-        next: () => {
-          this.ratingLoading = false;
-          this.ratingMovie = null;
-          this.userRating = 0;
-        },
-        error: () => {
-          this.ratingLoading = false;
-          console.error('Error al calificar la película');
-        },
+        next: () => { this.ratingLoading = false; this.ratingMovie = null; this.userRating = 0; },
+        error: () => { this.ratingLoading = false; },
       });
     }
   }
 
-  setRating(rating: number): void {
-    this.userRating = rating;
-  }
+  setRating(rating: number): void { this.userRating = rating; }
 
   onKeyPress(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      this.search();
-    }
+    if (event.key === 'Enter') this.search();
   }
 
   getItemTitle(): string {
@@ -179,9 +240,7 @@ export class SearchMoviesComponent implements OnInit, OnDestroy {
   }
 
   getItemName(item: any): string {
-    if (this.searchType === 'person') return item.name;
-    if (this.searchType === 'tv') return item.name;
-    return item.title;
+    return this.searchType === 'person' ? item.name : (item.title || item.name);
   }
 
   getItemReleaseDate(item: any): string {
@@ -195,13 +254,12 @@ export class SearchMoviesComponent implements OnInit, OnDestroy {
   }
 
   getItemRating(item: any): string {
-    if (this.searchType === 'person') return item.popularity?.toFixed(1) || 'N/A';
-    return item.vote_average?.toFixed(1) || 'N/A';
+    return this.searchType === 'person'
+      ? item.popularity?.toFixed(1) || 'N/A'
+      : item.vote_average?.toFixed(1) || 'N/A';
   }
 
-  canRate(): boolean {
-    return this.searchType === 'movie';
-  }
+  canRate(): boolean { return this.searchType === 'movie'; }
 
   toggleFav(item: any): void {
     if (this.searchType === 'person') return;

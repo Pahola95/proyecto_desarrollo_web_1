@@ -11,6 +11,7 @@
     <input
       type="text"
       [(ngModel)]="searchQuery"
+      (ngModelChange)="onQueryChange()"
       (keypress)="onKeyPress($event)"
       placeholder="Ingresa el nombre..."
       class="search-input"
@@ -19,6 +20,19 @@
     <button class="search-btn" (click)="search()" [disabled]="loading">
       {{ loading ? 'Buscando...' : 'Buscar' }}
     </button>
+  </div>
+
+  <!-- Genre Filter (only for movies) -->
+  <div class="genre-filter-row" *ngIf="searchType === 'movie'">
+    <select
+      [(ngModel)]="selectedGenreId"
+      (ngModelChange)="onGenreChange()"
+      class="search-type-select genre-select"
+      aria-label="Filtrar por género"
+    >
+      <option [ngValue]="null">Todos los géneros</option>
+      <option *ngFor="let genre of genres" [ngValue]="genre.id">{{ genre.name }}</option>
+    </select>
   </div>
 
   <!-- Error Messages -->
